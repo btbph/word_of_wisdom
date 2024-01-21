@@ -38,7 +38,7 @@ func (h Hashcash) Generate(resource string) string {
 	now := h.clock.Now().UTC().Format("060102") // YYMMDD
 	base := fmt.Sprintf("1:%d:%s:%s::%s", h.zeroBits, now, resource, salt)
 
-	counter := 0
+	var counter uint64 = 0
 	hashcashString := h.getHashcashString(base, counter) // TODO: introduce string builder
 	for !checkZeroes(h.hasher, h.zeroBits, hashcashString) {
 		hashcashString = h.getHashcashString(base, counter)
@@ -48,7 +48,7 @@ func (h Hashcash) Generate(resource string) string {
 	return hashcashString
 }
 
-func (h Hashcash) getHashcashString(base string, counter int) string {
+func (h Hashcash) getHashcashString(base string, counter uint64) string {
 	return base + fmt.Sprintf(":%x", counter)
 }
 

@@ -5,6 +5,7 @@ import (
 	"github.com/btbph/word_of_wisdom/internal/repo"
 	"github.com/google/uuid"
 	"io"
+	"log/slog"
 	"net"
 )
 
@@ -13,15 +14,20 @@ type Client struct {
 	state    ConnectionState
 	finished bool
 	id       uuid.UUID
-	cfg      *server.Config
+
+	cfg    *server.Config
+	logger *slog.Logger
 }
 
-func NewClient(conn net.Conn, cfg *server.Config) *Client {
+func NewClient(conn net.Conn, cfg *server.Config, logger *slog.Logger) *Client {
+	id := uuid.New()
+	l := logger.With("connectionID", id)
 	return &Client{
-		conn:  conn,
-		state: NewStandBy(repo.NewRepo()),
-		id:    uuid.New(),
-		cfg:   cfg,
+		conn:   conn,
+		state:  NewStandBy(repo.NewRepo(), l),
+		id:     id,
+		cfg:    cfg,
+		logger: l,
 	}
 }
 
@@ -34,18 +40,21 @@ func (c *Client) Close() {
 }
 
 func (c *Client) HandleRequests() {
-	defer c.conn.Close()
+	defer func() {
+		if err := c.conn.Close(); err != nil {
+			c.logger.Error("failed to close connection", "error", err)
+		}
+	}()
 	for !c.finished {
 		resp, err := c.state.Handle(c, c.conn)
 		if err != nil {
-			// log error
 			return
 		}
 
 		if len(resp) > 0 {
 			_, err = c.conn.Write(resp)
 			if err != nil {
-				// log error
+				c.logger.Error("failed to write response", "error", err)
 				return
 			}
 		}

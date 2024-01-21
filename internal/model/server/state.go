@@ -13,6 +13,7 @@ import (
 	"github.com/btbph/word_of_wisdom/internal/hashcash"
 	"github.com/google/uuid"
 	"io"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -26,24 +27,31 @@ type Repo interface {
 }
 
 type StandBy struct {
-	repo Repo
+	repo   Repo
+	logger *slog.Logger
 }
 
-func NewStandBy(repo Repo) *StandBy {
-	return &StandBy{repo: repo}
+func NewStandBy(repo Repo, logger *slog.Logger) *StandBy {
+	return &StandBy{
+		repo:   repo,
+		logger: logger,
+	}
 }
 
 func (s StandBy) Handle(connection ClientInterface, data io.Reader) ([]byte, error) {
 	req := request.RequestChallenge{}
 	if err := json.NewDecoder(data).Decode(&req); err != nil {
+		s.logger.Error("failed to decode request challenge request", "error", err)
 		return nil, fmt.Errorf("failed to decode request: %w", err)
 	}
+	s.logger.Info("request for challenge recieved")
 
 	if req.Type != dto.RequestChallenge {
+		s.logger.Warn("expected request challenge request")
 		return nil, errors.New("expect request challenge")
 	}
 
-	connection.SetState(NewWaitingForSolution(s.repo))
+	connection.SetState(NewWaitingForSolution(s.repo, s.logger))
 
 	var (
 		zeroBits   = connection.Config().Challenge.ZeroBits
@@ -51,6 +59,7 @@ func (s StandBy) Handle(connection ClientInterface, data io.Reader) ([]byte, err
 	)
 	res := response.NewRequestChallengeResponse(zeroBits, saltLength)
 	if err := s.repo.SetChallengeInfo(context.TODO(), connection.ClientID(), dto.NewChallengeInfo(zeroBits, saltLength)); err != nil {
+		s.logger.Error("failed to set challenge info", "error", err)
 		return nil, fmt.Errorf("failed to set challenge info: %w", err)
 	}
 
@@ -58,25 +67,33 @@ func (s StandBy) Handle(connection ClientInterface, data io.Reader) ([]byte, err
 }
 
 type WaitingForSolution struct {
-	repo Repo
+	repo   Repo
+	logger *slog.Logger
 }
 
-func NewWaitingForSolution(repo Repo) *WaitingForSolution {
-	return &WaitingForSolution{repo: repo}
+func NewWaitingForSolution(repo Repo, logger *slog.Logger) *WaitingForSolution {
+	return &WaitingForSolution{
+		repo:   repo,
+		logger: logger,
+	}
 }
 
 func (s WaitingForSolution) Handle(connection ClientInterface, data io.Reader) ([]byte, error) {
 	req := request.SolutionProvided{}
 	if err := json.NewDecoder(data).Decode(&req); err != nil {
+		s.logger.Error("failed to decode solution provided request", "error", err)
 		return nil, fmt.Errorf("failed to decode request: %w", err)
 	}
+	s.logger.Info("solution has been recieved")
 
 	if req.Type != dto.SolutionProvided {
+		s.logger.Warn("expected solution provided request request")
 		return nil, errors.New("wrong request type")
 	}
 
 	challengeInfo, err := s.repo.ChallengeInfo(context.TODO(), connection.ClientID())
 	if err != nil {
+		s.logger.Error("failed to get challenge info", "error", err)
 		return nil, fmt.Errorf("failed to get challenge info: %w", err)
 	}
 
@@ -89,24 +106,29 @@ func (s WaitingForSolution) Handle(connection ClientInterface, data io.Reader) (
 		s.expectedResource(connection.Config().Server.Address),
 	)
 	if err = validator.Validate(req.Solution); err != nil {
+		s.logger.Warn("solution validation failed", "error", err)
 		return nil, fmt.Errorf("solution validation failed: %w", err)
 	}
 
 	present, err := s.repo.CheckSolutionPresence(context.TODO(), req.Solution)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check solution presents: %w", err)
+		s.logger.Error("failed to check solution presence", "error", err)
+		return nil, fmt.Errorf("failed to check solution presence: %w", err)
 	}
 
 	if present {
+		s.logger.Warn("current solution already presents", "solution", req.Solution)
 		return nil, errors.New("current solution already presents")
 	}
 
 	if err = s.repo.SaveSolution(context.TODO(), req.Solution); err != nil {
+		s.logger.Error("failed to save solution", "error", err)
 		return nil, errors.New("failed to save solution")
 	}
 
 	quote, err := s.repo.RandomQuote(context.TODO())
 	if err != nil {
+		s.logger.Error("failed to get random quote", "error", err)
 		return nil, fmt.Errorf("failed to get random quote: %w", err)
 	}
 
