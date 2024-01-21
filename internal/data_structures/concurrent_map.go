@@ -27,14 +27,8 @@ func (c *ConcurrentMap[K, V]) Insert(key K, value V) {
 	c.data[key] = value
 }
 
-func (c *ConcurrentMap[K, V]) InsertIfDoesntExist(key K, value V) bool {
+func (c *ConcurrentMap[K, V]) Delete(key K) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-
-	value, ok := c.data[key]
-	if !ok {
-		c.data[key] = value
-	}
-
-	return !ok
+	delete(c.data, key)
 }

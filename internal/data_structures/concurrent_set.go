@@ -18,7 +18,3 @@ func (c *ConcurrentSet[K]) Exist(key K) bool {
 func (c *ConcurrentSet[K]) Insert(key K) {
 	c.m.Insert(key, struct{}{})
 }
-
-func (c *ConcurrentSet[K]) InsertIfDoesntExist(key K) bool {
-	return c.m.InsertIfDoesntExist(key, struct{}{})
-}

@@ -37,6 +37,11 @@ func (r *Repo) SetChallengeInfo(_ context.Context, ID uuid.UUID, challengeInfo d
 	return nil
 }
 
+func (r *Repo) RemoveChallengeInfo(ctx context.Context, ID uuid.UUID) error {
+	r.challengesInfo.Delete(ID)
+	return nil
+}
+
 func (r *Repo) ChallengeInfo(_ context.Context, ID uuid.UUID) (dto.ChallengeInfo, error) {
 	res, ok := r.challengesInfo.Get(ID)
 	if !ok {

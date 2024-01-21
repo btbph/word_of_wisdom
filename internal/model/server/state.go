@@ -20,6 +20,7 @@ import (
 
 type Repo interface {
 	SetChallengeInfo(ctx context.Context, ID uuid.UUID, challengeInfo dto.ChallengeInfo) error
+	RemoveChallengeInfo(ctx context.Context, ID uuid.UUID) error
 	ChallengeInfo(ctx context.Context, ID uuid.UUID) (dto.ChallengeInfo, error)
 	CheckSolutionPresence(ctx context.Context, solution string) (bool, error)
 	SaveSolution(ctx context.Context, solution string) error
@@ -131,6 +132,12 @@ func (s WaitingForSolution) Handle(connection ClientInterface, data io.Reader) (
 		s.logger.Error("failed to get random quote", "error", err)
 		return nil, fmt.Errorf("failed to get random quote: %w", err)
 	}
+
+	go func() {
+		if err = s.repo.RemoveChallengeInfo(context.TODO(), connection.ClientID()); err != nil {
+			s.logger.Error("failed to remove challenge info", "error", err)
+		}
+	}()
 
 	connection.SetState(Finished{})
 	connection.Close()
