@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/btbph/word_of_wisdom/internal/config/server"
 	"github.com/btbph/word_of_wisdom/internal/repo"
 	"github.com/google/uuid"
 	"io"
@@ -12,13 +13,15 @@ type Client struct {
 	state    ConnectionState
 	finished bool
 	id       uuid.UUID
+	cfg      *server.Config
 }
 
-func NewClient(conn net.Conn) *Client {
+func NewClient(conn net.Conn, cfg *server.Config) *Client {
 	return &Client{
 		conn:  conn,
 		state: NewStandBy(repo.NewRepo()),
 		id:    uuid.New(),
+		cfg:   cfg,
 	}
 }
 
@@ -53,10 +56,15 @@ func (c *Client) ClientID() uuid.UUID {
 	return c.id
 }
 
+func (c *Client) Config() *server.Config {
+	return c.cfg
+}
+
 type ClientInterface interface {
 	SetState(state ConnectionState)
 	Close()
 	ClientID() uuid.UUID
+	Config() *server.Config
 }
 
 type ConnectionState interface {

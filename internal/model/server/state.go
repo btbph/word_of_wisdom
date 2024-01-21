@@ -13,6 +13,7 @@ import (
 	"github.com/btbph/word_of_wisdom/internal/hashcash"
 	"github.com/google/uuid"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -43,11 +44,12 @@ func (s StandBy) Handle(connection ClientInterface, data io.Reader) ([]byte, err
 	}
 
 	connection.SetState(NewWaitingForSolution(s.repo))
-	const (
-		zeroBits   = 20
-		saltLength = 8
+
+	var (
+		zeroBits   = connection.Config().Challenge.ZeroBits
+		saltLength = connection.Config().Challenge.SaltLength
 	)
-	res := response.NewRequestChallengeResponse(zeroBits, saltLength) // TODO: take from config
+	res := response.NewRequestChallengeResponse(zeroBits, saltLength)
 	if err := s.repo.SetChallengeInfo(context.TODO(), connection.ClientID(), dto.NewChallengeInfo(zeroBits, saltLength)); err != nil {
 		return nil, fmt.Errorf("failed to set challenge info: %w", err)
 	}
@@ -78,9 +80,14 @@ func (s WaitingForSolution) Handle(connection ClientInterface, data io.Reader) (
 		return nil, fmt.Errorf("failed to get challenge info: %w", err)
 	}
 
-	expireDate := 28 * 24 * time.Hour
-	expectedResource := "localhost"
-	validator := hashcash.NewValidator(challengeInfo, clock.New(), expireDate, sha256.New(), expectedResource)
+	expireDate := time.Duration(connection.Config().Challenge.ExpireDateInHours) * time.Hour
+	validator := hashcash.NewValidator(
+		challengeInfo,
+		clock.New(),
+		expireDate,
+		sha256.New(),
+		s.expectedResource(connection.Config().Server.Address),
+	)
 	if err = validator.Validate(req.Solution); err != nil {
 		return nil, fmt.Errorf("solution validation failed: %w", err)
 	}
@@ -108,6 +115,10 @@ func (s WaitingForSolution) Handle(connection ClientInterface, data io.Reader) (
 
 	res := response.NewSolutionProvided(quote)
 	return json.Marshal(res)
+}
+
+func (s WaitingForSolution) expectedResource(address string) string {
+	return strings.Split(address, ":")[0]
 }
 
 type Finished struct{}

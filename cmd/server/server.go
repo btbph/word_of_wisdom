@@ -2,12 +2,18 @@ package main
 
 import (
 	"fmt"
+	config "github.com/btbph/word_of_wisdom/internal/config/server"
 	"github.com/btbph/word_of_wisdom/internal/model/server"
 	"net"
 )
 
 func main() {
-	listener, err := net.Listen("tcp", "localhost:8080")
+	cfg, err := config.New()
+	if err != nil {
+		panic(err)
+	}
+
+	listener, err := net.Listen("tcp", cfg.Server.Address)
 	if err != nil {
 		panic(err)
 	}
@@ -21,7 +27,7 @@ func main() {
 			// log error
 			continue
 		}
-		client := server.NewClient(conn)
+		client := server.NewClient(conn, cfg)
 		go client.HandleRequests()
 	}
 }

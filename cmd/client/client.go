@@ -5,14 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/btbph/word_of_wisdom/internal/clock"
+	config "github.com/btbph/word_of_wisdom/internal/config/client"
 	"github.com/btbph/word_of_wisdom/internal/dto/request"
 	"github.com/btbph/word_of_wisdom/internal/dto/response"
 	"github.com/btbph/word_of_wisdom/internal/hashcash"
 	"net"
+	"strings"
 )
 
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8080")
+	cfg, err := config.New()
+	if err != nil {
+		panic(err)
+	}
+
+	conn, err := net.Dial("tcp", cfg.Client.DestinationAddress)
 	if err != nil {
 		panic(err)
 	}
@@ -28,7 +35,7 @@ func main() {
 		return
 	}
 
-	if err = sendChallengeSolution(conn, challenge, "localhost"); err != nil {
+	if err = sendChallengeSolution(conn, challenge, resource(cfg.Client.DestinationAddress)); err != nil {
 		return
 	}
 
@@ -62,6 +69,10 @@ func recieveChallenge(conn net.Conn) (response.RequestChallenge, error) {
 	}
 
 	return res, nil
+}
+
+func resource(destinationAddress string) string {
+	return strings.Split(destinationAddress, ":")[0]
 }
 
 func sendChallengeSolution(conn net.Conn, challenge response.RequestChallenge, resource string) error {

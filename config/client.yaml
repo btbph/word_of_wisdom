@@ -1,0 +1,3 @@
+Client:
+    DestinationAddress: localhost:8080
+    LogLevel: info
