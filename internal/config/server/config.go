@@ -4,6 +4,7 @@ import (
 	"github.com/btbph/word_of_wisdom/internal/config/server/challenge"
 	"github.com/btbph/word_of_wisdom/internal/config/server/server"
 	"github.com/spf13/viper"
+	"strings"
 )
 
 type Config struct {
@@ -13,6 +14,7 @@ type Config struct {
 
 func New() (*Config, error) {
 	vp := viper.New()
+	vp.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	vp.SetConfigType("yaml")
 	vp.SetConfigName("server")
 	vp.AddConfigPath("config")

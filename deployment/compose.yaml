@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ../
+      dockerfile: ./build/package/server.Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_SERVER_ADDRESS=server:8080
+
+  client:
+    build:
+      context: ../
+      dockerfile: ./build/package/client.Dockerfile
+    depends_on:
+      - server
+    environment:
+      - APP_CLIENT_DESTINATIONADDRESS=server:8080
