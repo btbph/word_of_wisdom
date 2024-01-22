@@ -4,14 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/btbph/word_of_wisdom/internal/clock"
-	"github.com/btbph/word_of_wisdom/internal/decode"
 	"github.com/btbph/word_of_wisdom/internal/dto"
-	"github.com/btbph/word_of_wisdom/internal/dto/request"
 	"github.com/btbph/word_of_wisdom/internal/dto/response"
 	"github.com/btbph/word_of_wisdom/internal/hashcash"
+	"github.com/btbph/word_of_wisdom/internal/serializer"
 	"github.com/btbph/word_of_wisdom/internal/usecase"
 	"github.com/google/uuid"
 	"io"
@@ -42,17 +40,13 @@ func NewStandBy(repo Repo, logger *slog.Logger) *StandBy {
 }
 
 func (s StandBy) Handle(ctx context.Context, connection ClientInterface, data io.Reader) ([]byte, error) {
-	req, err := decode.JsonFromReader[request.RequestChallenge](data)
+	ser := serializer.NewRequestChallenge(s.logger)
+	_, err := ser.Serialize(data)
 	if err != nil {
-		s.logger.Error("failed to decode request challenge request", "error", err)
-		return nil, fmt.Errorf("failed to decode request: %w", err)
+		return nil, err
 	}
-	s.logger.Info("request for challenge recieved")
 
-	if req.Type != dto.RequestChallenge {
-		s.logger.Warn("expected request challenge request")
-		return nil, errors.New("expect request challenge")
-	}
+	s.logger.Info("request for challenge recieved")
 
 	var (
 		zeroBits   = connection.Config().Challenge.ZeroBits
@@ -84,17 +78,13 @@ func NewWaitingForSolution(repo Repo, logger *slog.Logger) *WaitingForSolution {
 }
 
 func (s WaitingForSolution) Handle(ctx context.Context, connection ClientInterface, data io.Reader) ([]byte, error) {
-	req, err := decode.JsonFromReader[request.SolutionProvided](data)
+	ser := serializer.NewSolutionProvided(s.logger)
+	req, err := ser.Serialize(data)
 	if err != nil {
-		s.logger.Error("failed to decode solution provided request", "error", err)
-		return nil, fmt.Errorf("failed to decode request: %w", err)
+		return nil, err
 	}
-	s.logger.Info("solution has been recieved")
 
-	if req.Type != dto.SolutionProvided {
-		s.logger.Warn("expected solution provided request request")
-		return nil, errors.New("wrong request type")
-	}
+	s.logger.Info("solution has been recieved")
 
 	challengeInfo, err := s.repo.ChallengeInfo(ctx, connection.ClientID())
 	if err != nil {

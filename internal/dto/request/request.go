@@ -6,8 +6,8 @@ type RequestChallenge struct {
 	Type dto.Type `json:"action"`
 }
 
-func NewRequestChallenge() *RequestChallenge {
-	return &RequestChallenge{
+func NewRequestChallenge() RequestChallenge {
+	return RequestChallenge{
 		Type: dto.RequestChallenge,
 	}
 }
@@ -17,8 +17,8 @@ type SolutionProvided struct {
 	Solution string   `json:"solution"`
 }
 
-func NewSolutionProvided(solution string) *SolutionProvided {
-	return &SolutionProvided{
+func NewSolutionProvided(solution string) SolutionProvided {
+	return SolutionProvided{
 		Type:     dto.SolutionProvided,
 		Solution: solution,
 	}
