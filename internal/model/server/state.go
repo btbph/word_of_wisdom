@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"github.com/btbph/word_of_wisdom/internal/clock"
 	config "github.com/btbph/word_of_wisdom/internal/config/server"
@@ -69,7 +68,7 @@ func (s StandBy) Handle(ctx context.Context, connection ClientInterface, data io
 	connection.SetState(NewWaitingForSolution(s.repo, s.cfg, s.logger))
 
 	res := response.NewRequestChallengeResponse(zeroBits, saltLength)
-	return json.Marshal(res)
+	return response.MarshalRequestChallenge(res)
 }
 
 type WaitingForSolution struct {
@@ -120,7 +119,7 @@ func (s WaitingForSolution) Handle(ctx context.Context, connection ClientInterfa
 	connection.Close()
 
 	res := response.NewSolutionProvided(quote)
-	return json.Marshal(res)
+	return response.MarshalSolutionProvided(res)
 }
 
 func (s WaitingForSolution) expectedResource(address string) string {

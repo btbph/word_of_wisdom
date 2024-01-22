@@ -1,6 +1,7 @@
 package response
 
 import (
+	"encoding/json"
 	"github.com/btbph/word_of_wisdom/internal/dto"
 )
 
@@ -18,14 +19,22 @@ func NewRequestChallengeResponse(zeroBits, saltLength int) RequestChallenge {
 	}
 }
 
+func MarshalRequestChallenge(res RequestChallenge) ([]byte, error) {
+	return json.Marshal(res)
+}
+
 type SolutionProvided struct {
 	Type  dto.Type `json:"type"`
 	Quote string   `json:"quote"`
 }
 
-func NewSolutionProvided(quote string) *SolutionProvided {
-	return &SolutionProvided{
+func NewSolutionProvided(quote string) SolutionProvided {
+	return SolutionProvided{
 		Type:  dto.QuoteProvided,
 		Quote: quote,
 	}
+}
+
+func MarshalSolutionProvided(res SolutionProvided) ([]byte, error) {
+	return json.Marshal(res)
 }
