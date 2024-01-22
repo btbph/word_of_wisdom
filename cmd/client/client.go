@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/btbph/word_of_wisdom/internal/clock"
 	config "github.com/btbph/word_of_wisdom/internal/config/client"
+	"github.com/btbph/word_of_wisdom/internal/decode"
 	"github.com/btbph/word_of_wisdom/internal/dto/request"
 	"github.com/btbph/word_of_wisdom/internal/dto/response"
 	"github.com/btbph/word_of_wisdom/internal/hashcash"
@@ -74,12 +75,11 @@ func requestChallenge(conn net.Conn, logger *slog.Logger) error {
 }
 
 func recieveChallenge(conn net.Conn, logger *slog.Logger) (response.RequestChallenge, error) {
-	res := response.RequestChallenge{}
-	if err := json.NewDecoder(conn).Decode(&res); err != nil {
+	res, err := decode.JsonFromReader[response.RequestChallenge](conn)
+	if err != nil {
 		logger.Error("failed to decode reqest challenge response", "error", err)
 		return response.RequestChallenge{}, fmt.Errorf("failed to decode reqest challenge response: %w", err)
 	}
-
 	return res, nil
 }
 
@@ -107,8 +107,8 @@ func sendChallengeSolution(conn net.Conn, challenge response.RequestChallenge, r
 }
 
 func recieveQuote(conn net.Conn, logger *slog.Logger) (string, error) {
-	res := response.SolutionProvided{}
-	if err := json.NewDecoder(conn).Decode(&res); err != nil {
+	res, err := decode.JsonFromReader[response.SolutionProvided](conn)
+	if err != nil {
 		logger.Error("failed to decode solution provided response", "error", err)
 		return "", fmt.Errorf("failed to decode solution provided response: %w", err)
 	}

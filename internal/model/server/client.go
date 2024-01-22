@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"github.com/btbph/word_of_wisdom/internal/config/server"
 	"github.com/btbph/word_of_wisdom/internal/repo"
 	"github.com/google/uuid"
@@ -46,7 +47,7 @@ func (c *Client) HandleRequests() {
 		}
 	}()
 	for !c.finished {
-		resp, err := c.state.Handle(c, c.conn)
+		resp, err := c.state.Handle(context.TODO(), c, c.conn)
 		if err != nil {
 			return
 		}
@@ -77,5 +78,5 @@ type ClientInterface interface {
 }
 
 type ConnectionState interface {
-	Handle(connection ClientInterface, data io.Reader) ([]byte, error)
+	Handle(ctx context.Context, connection ClientInterface, data io.Reader) ([]byte, error)
 }
