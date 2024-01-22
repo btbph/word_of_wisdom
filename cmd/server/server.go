@@ -35,6 +35,7 @@ func main() {
 		conn, err := listener.Accept()
 		if err != nil {
 			l.Error("failed to accept connection", "error", err)
+			continue
 		}
 		l.Info("connection is established")
 
