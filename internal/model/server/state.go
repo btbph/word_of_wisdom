@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/btbph/word_of_wisdom/internal/clock"
+	config "github.com/btbph/word_of_wisdom/internal/config/server"
 	"github.com/btbph/word_of_wisdom/internal/dto"
 	"github.com/btbph/word_of_wisdom/internal/dto/response"
 	"github.com/btbph/word_of_wisdom/internal/hashcash"
@@ -29,12 +30,18 @@ type Repo interface {
 
 type StandBy struct {
 	repo   Repo
+	cfg    *config.Config
 	logger *slog.Logger
 }
 
-func NewStandBy(repo Repo, logger *slog.Logger) *StandBy {
+func NewStandBy(
+	repo Repo,
+	cfg *config.Config,
+	logger *slog.Logger,
+) *StandBy {
 	return &StandBy{
 		repo:   repo,
+		cfg:    cfg,
 		logger: logger,
 	}
 }
@@ -49,8 +56,8 @@ func (s StandBy) Handle(ctx context.Context, connection ClientInterface, data io
 	s.logger.Info("request for challenge recieved")
 
 	var (
-		zeroBits   = connection.Config().Challenge.ZeroBits
-		saltLength = connection.Config().Challenge.SaltLength
+		zeroBits   = s.cfg.Challenge.ZeroBits
+		saltLength = s.cfg.Challenge.SaltLength
 	)
 
 	uc := usecase.NewInitChallenge(s.repo, s.logger)
@@ -59,7 +66,7 @@ func (s StandBy) Handle(ctx context.Context, connection ClientInterface, data io
 		return nil, fmt.Errorf("failed to set challenge info: %w", err)
 	}
 
-	connection.SetState(NewWaitingForSolution(s.repo, s.logger))
+	connection.SetState(NewWaitingForSolution(s.repo, s.cfg, s.logger))
 
 	res := response.NewRequestChallengeResponse(zeroBits, saltLength)
 	return json.Marshal(res)
@@ -67,12 +74,14 @@ func (s StandBy) Handle(ctx context.Context, connection ClientInterface, data io
 
 type WaitingForSolution struct {
 	repo   Repo
+	cfg    *config.Config
 	logger *slog.Logger
 }
 
-func NewWaitingForSolution(repo Repo, logger *slog.Logger) *WaitingForSolution {
+func NewWaitingForSolution(repo Repo, cfg *config.Config, logger *slog.Logger) *WaitingForSolution {
 	return &WaitingForSolution{
 		repo:   repo,
+		cfg:    cfg,
 		logger: logger,
 	}
 }
@@ -92,13 +101,13 @@ func (s WaitingForSolution) Handle(ctx context.Context, connection ClientInterfa
 		return nil, fmt.Errorf("failed to get challenge info: %w", err)
 	}
 
-	expireDate := time.Duration(connection.Config().Challenge.ExpireDateInHours) * time.Hour
+	expireDate := time.Duration(s.cfg.Challenge.ExpireDateInHours) * time.Hour
 	validator := hashcash.NewValidator(
 		challengeInfo,
 		clock.New(),
 		expireDate,
 		sha256.New(),
-		s.expectedResource(connection.Config().Server.Address),
+		s.expectedResource(s.cfg.Server.Address),
 	)
 
 	uc := usecase.NewCheckSolution(s.repo, validator, s.logger)

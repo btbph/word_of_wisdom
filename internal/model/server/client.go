@@ -16,7 +16,6 @@ type Client struct {
 	finished bool
 	id       uuid.UUID
 
-	cfg    *server.Config
 	logger *slog.Logger
 }
 
@@ -25,9 +24,8 @@ func NewClient(conn net.Conn, cfg *server.Config, logger *slog.Logger) *Client {
 	l := logger.With("connectionID", id)
 	return &Client{
 		conn:   conn,
-		state:  NewStandBy(repo.NewRepo(), l),
+		state:  NewStandBy(repo.NewRepo(), cfg, l),
 		id:     id,
-		cfg:    cfg,
 		logger: l,
 	}
 }
@@ -66,15 +64,10 @@ func (c *Client) ClientID() uuid.UUID {
 	return c.id
 }
 
-func (c *Client) Config() *server.Config {
-	return c.cfg
-}
-
 type ClientInterface interface {
 	SetState(state ConnectionState)
 	Close()
 	ClientID() uuid.UUID
-	Config() *server.Config
 }
 
 type ConnectionState interface {
