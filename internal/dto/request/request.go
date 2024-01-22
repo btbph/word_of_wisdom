@@ -1,6 +1,9 @@
 package request
 
-import "github.com/btbph/word_of_wisdom/internal/dto"
+import (
+	"encoding/json"
+	"github.com/btbph/word_of_wisdom/internal/dto"
+)
 
 type RequestChallenge struct {
 	Type dto.Type `json:"action"`
@@ -10,6 +13,10 @@ func NewRequestChallenge() RequestChallenge {
 	return RequestChallenge{
 		Type: dto.RequestChallenge,
 	}
+}
+
+func MarshalRequestChallenge(req RequestChallenge) ([]byte, error) {
+	return json.Marshal(req)
 }
 
 type SolutionProvided struct {
@@ -22,4 +29,8 @@ func NewSolutionProvided(solution string) SolutionProvided {
 		Type:     dto.SolutionProvided,
 		Solution: solution,
 	}
+}
+
+func MarshalSolutionProvided(req SolutionProvided) ([]byte, error) {
+	return json.Marshal(req)
 }

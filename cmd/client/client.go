@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"github.com/btbph/word_of_wisdom/internal/clock"
 	config "github.com/btbph/word_of_wisdom/internal/config/client"
@@ -58,8 +57,7 @@ func main() {
 }
 
 func requestChallenge(conn net.Conn, logger *slog.Logger) error {
-	req := request.NewRequestChallenge()
-	bytes, err := json.Marshal(req)
+	bytes, err := request.MarshalRequestChallenge(request.NewRequestChallenge())
 	if err != nil {
 		logger.Error("failed to marshall request challenge request", "error", err)
 		return fmt.Errorf("failed to marshall request challenge request: %w", err)
@@ -91,7 +89,7 @@ func sendChallengeSolution(conn net.Conn, challenge response.RequestChallenge, r
 	h := hashcash.NewHashcash(challenge.ZeroBits, challenge.SaltLength, clock.New(), sha256.New())
 	req := request.NewSolutionProvided(h.Generate(resource))
 
-	bytes, err := json.Marshal(req)
+	bytes, err := request.MarshalSolutionProvided(req)
 	if err != nil {
 		logger.Error("failed to marshall solution provided response", "error", err)
 		return err
