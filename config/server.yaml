@@ -3,6 +3,6 @@ Server:
     LogLevel: info
 
 Challenge:
-    ZeroBits: 20
+    ZeroBits: 8
     SaltLength: 8
     ExpireDateInHours: 672 # 28 days
